@@ -28,7 +28,7 @@ logging.basicConfig(filename='sync.log', filemode='w', format='%(asctime)s - %(l
 def createInitialEntry():
     """ Create initial entry message for Ghostwriter's Oplog (POST) """
     #print("[*] Creating Initial Ghostwriter Oplog Entry")
-    logging.debug("Creating initial Ghostwriter Oplog Entry")
+    logging.info("Creating initial Ghostwriter Oplog Entry")
     gw_message = {}
     gw_message["oplog_id"] = GHOSTWRITER_OPLOG_ID
     gw_message["source_ip"] = f"Mythic TS ({MYTHIC_IP})"
@@ -91,7 +91,7 @@ def mythic_task_to_ghostwriter_message(message) -> dict:
 def createEntry(message):
     """ Create entry for Ghostwriter's Oplog (POST) """
     print(f"[*] Adding task: {message.agent_task_id}")
-    logging.debug(f"Adding task: {message.agent_task_id}")
+    logging.info(f"Adding task: {message.agent_task_id}")
     gw_message = mythic_task_to_ghostwriter_message(message)
     try:
         # Fun fact, if you leave off the trailing "/" on oplog/api/entries/ then this POST return "200 OK" without actually doing a thing!
@@ -106,7 +106,7 @@ def createEntry(message):
             else:
                 created_obj = json.loads(response.text)
                 rconn.set(message.agent_task_id, created_obj["id"])
-                logging.debug(f'Successfully set record in redis for task: {message.agent_task_id}')
+                logging.info(f'Successfully set record in redis for task: {message.agent_task_id}')
         else:
             logger.debug(f"mythic_task_to_ghostwriter_message returned None object")
 
@@ -118,7 +118,7 @@ def createEntry(message):
 def updateEntry(message, entry_id):
     """ Update an existing Ghostwriter oplog entry with more details from Mythic (PUT) """
     print(f"[*] Updating task: {message.agent_task_id} : {entry_id}")
-    logging.debug(f'Updating task: {message.agent_task_id} : {entry_id}')
+    logging.info(f'Updating task: {message.agent_task_id} : {entry_id}')
     gw_message = mythic_task_to_ghostwriter_message(message)
     try:
         if gw_message is not None:
@@ -128,7 +128,7 @@ def updateEntry(message, entry_id):
 
             if response.status_code != 200:
                 print(f"[!] Error posting to Ghostwriter: {response.status_code}")
-                logging.debug(f'Ghostwriter returned non-200 response in update request: {response.status_code}')
+                logging.info(f'Ghostwriter returned non-200 response in update request: {response.status_code}')
         else:
             logger.debug(f"mythic_task_to_ghostwriter_message returned None")
             
@@ -169,7 +169,7 @@ async def handle_response(token, data):
     if gw_message is not None:
 
         print(f"[*] Updating entry with response data: {entry_id.decode()}")
-        logging.debug(f"Updating entry with response data: {entry_id.decode()}")
+        logging.info(f"Updating entry with response data: {entry_id.decode()}")
 
         response = requests.put(
             f"{GHOSTWRITER_URL}/oplog/api/entries/{entry_id.decode()}/?format=json",
@@ -182,12 +182,12 @@ async def handle_response(token, data):
             print(f"[!] Error updating ghostwriter entry: {response.status_code}")
             logging.error(f"[!] Error updating ghostwriter entry: {response.status_code}")
     else:
-        logging.debug("mythic_response_to_ghostwriter_message returned None object")
+        logging.info("mythic_response_to_ghostwriter_message returned None object")
 
 async def scripting():
-    if len(MYTHIC_API_KEY) == 0:
-        logging.debug("MYTHIC_API_KEY env variable missing")
-        logging.debug("Attempting to create new API key")
+    if MYTHIC_API_KEY is not None and len(MYTHIC_API_KEY):
+        logging.info("MYTHIC_API_KEY env variable missing")
+        logging.info("Attempting to create new API key")
         mythic = mythic_rest.Mythic(username=MYTHIC_USERNAME,
             password=MYTHIC_PASSWORD, server_ip=MYTHIC_IP, server_port="7443",
             ssl=True, global_timeout=-1)
@@ -208,13 +208,13 @@ async def scripting():
         try:
             token_resp = await mythic.set_or_create_apitoken()
             if len(token_resp.response) > 0:
-                logging.debug(f'Successfully obtained API token: {token_resp.response}')
+                logging.info(f'Successfully obtained API token: {token_resp.response}')
 
         except Exception as e:
             logging.error(f'{e}')
 
     else:
-        logging.debug("MYTHIC_API_KEY present...setting event handlers for all tasks, and responses")
+        logging.info("MYTHIC_API_KEY present...setting event handlers for all tasks, and responses")
         mythic = mythic_rest.Mythic(apitoken=MYTHIC_API_KEY,
             server_ip=MYTHIC_IP, server_port="7443", ssl=True,
             global_timeout=-1)
@@ -233,7 +233,7 @@ async def main():
                 await asyncio.gather(*pending)
 
     except KeyboardInterrupt:
-        logging.debug("Received keyboard interrupt, exiting....")
+        logging.info("Received keyboard interrupt, exiting....")
         pending = asyncio.Task.all_tasks()
         for p in pending:
             p.cancel()
