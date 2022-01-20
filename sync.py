@@ -27,7 +27,7 @@ logging.basicConfig(filename='sync.log', filemode='w', format='%(asctime)s - %(l
 
 def createInitialEntry():
     """ Create initial entry message for Ghostwriter's Oplog (POST) """
-    #print("[*] Creating Initial Ghostwriter Oplog Entry")
+    print("[*] Creating Initial Ghostwriter Oplog Entry")
     logging.info("Creating initial Ghostwriter Oplog Entry")
     gw_message = {}
     gw_message["oplog_id"] = GHOSTWRITER_OPLOG_ID
@@ -183,6 +183,7 @@ async def handle_response(token, data):
             logging.error(f"[!] Error updating ghostwriter entry: {response.status_code}")
     else:
         logging.info("mythic_response_to_ghostwriter_message returned None object")
+        print("mythic_response_to_ghostwriter_messaged returned NoneType object")
 
 async def scripting():
     if MYTHIC_API_KEY is not None and len(MYTHIC_API_KEY):
@@ -203,6 +204,7 @@ async def scripting():
 
         except Exception as e:
             logging.error(f'{e}')
+            print(f"{str(e)}")
             exit(0)
 
         try:
@@ -212,6 +214,7 @@ async def scripting():
 
         except Exception as e:
             logging.error(f'{e}')
+            print(f"{str(e)}")
 
     else:
         logging.info("MYTHIC_API_KEY present...setting event handlers for all tasks, and responses")
